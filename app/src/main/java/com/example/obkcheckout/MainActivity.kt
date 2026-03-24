@@ -94,7 +94,7 @@ private fun OBKApp(vm: CheckoutViewModel = viewModel()) {
             ToteCheckoutStartScreen(
                 onScanClicked = { navController.navigate("scanner") },
                 onManualSubmit = { toteId ->
-                    vm.addScannedId(toteId)
+                    vm.addManualToteId(toteId)
                     navController.navigate("confirm")
                 },
                 onLogout = {
@@ -119,6 +119,7 @@ private fun OBKApp(vm: CheckoutViewModel = viewModel()) {
                 scannedByCompany = vm.scannedByCompany,
                 companyByToteId  = companyByToteId,
                 onScannedTote    = { toteId -> vm.addScannedId(toteId) },
+                onManualToteId   = { toteId -> vm.addManualToteId(toteId) },
                 onRemoveTote     = { company, toteId -> vm.removeScannedId(company, toteId) },
                 onDone           = { navController.navigate("confirm") },
                 onBack           = { navController.popBackStack() }
@@ -308,44 +309,8 @@ private fun ToteCheckoutStartScreen(
             ) {
                 Spacer(Modifier.height(10.dp))
 
-                Button(
-                    onClick = onScanClicked,
-                    modifier = Modifier.fillMaxWidth().height(76.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = green),
-                    shape = RoundedCornerShape(10.dp)
-                ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text(
-                            text = "Scan QR Code",
-                            color = MaterialTheme.colorScheme.onPrimary,
-                            fontWeight = FontWeight.Bold,
-                            fontSize = fs(16)
-                        )
-                        Spacer(Modifier.size(14.dp))
-                        androidx.compose.material3.Icon(
-                            imageVector = Icons.Filled.QrCode2,
-                            contentDescription = "QR",
-                            tint = MaterialTheme.colorScheme.onPrimary,
-                            modifier = Modifier.size(24.dp)
-                        )
-                    }
-                }
-
-                Spacer(Modifier.height(22.dp))
-
-                /*Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Divider(modifier = Modifier.weight(1f))
-                    Text(text = "  or  ", color = Color.Gray, fontSize = fs(12))
-                    Divider(modifier = Modifier.weight(1f))
-                }
-
-                Spacer(Modifier.height(22.dp))
-
                 Text(
-                    text = "Enter Tote ID(s) to checkout",
+                    text = "Enter Tote ID to checkout",
                     modifier = Modifier.fillMaxWidth(),
                     color = Color.Black,
                     fontSize = fs(13),
@@ -394,7 +359,44 @@ private fun ToteCheckoutStartScreen(
                     )
                 }
 
-                Spacer(Modifier.height(12.dp))*/
+                Spacer(Modifier.height(22.dp))
+
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Divider(modifier = Modifier.weight(1f))
+                    Text(text = "  or  ", color = Color.Gray, fontSize = fs(12))
+                    Divider(modifier = Modifier.weight(1f))
+                }
+
+                Spacer(Modifier.height(22.dp))
+
+                OutlinedButton(
+                    onClick = onScanClicked,
+                    modifier = Modifier.fillMaxWidth().height(56.dp),
+                    border = BorderStroke(2.dp, green),
+                    shape = RoundedCornerShape(10.dp),
+                    colors = ButtonDefaults.outlinedButtonColors(containerColor = Color.White)
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(
+                            text = "Scan QR Code",
+                            color = green,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = fs(14)
+                        )
+                        Spacer(Modifier.size(10.dp))
+                        androidx.compose.material3.Icon(
+                            imageVector = Icons.Filled.QrCode2,
+                            contentDescription = "QR",
+                            tint = green,
+                            modifier = Modifier.size(22.dp)
+                        )
+                    }
+                }
+
+                Spacer(Modifier.height(16.dp))
 
                 OutlinedButton(
                     onClick = onLogout,

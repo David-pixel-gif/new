@@ -17,6 +17,7 @@ import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -38,6 +39,7 @@ fun ContinuousScannerScreen(
     scannedByCompany: Map<String, List<String>>,
     companyByToteId: Map<String, String>,
     onScannedTote: (String) -> Unit,
+    onManualToteId: (String) -> Unit,
     onRemoveTote: (company: String, toteId: String) -> Unit,
     onDone: () -> Unit,
     onBack: () -> Unit
@@ -56,6 +58,7 @@ fun ContinuousScannerScreen(
 
     var lastScanAt    by remember { mutableStateOf(0L) }
     var lastScanValue by remember { mutableStateOf("") }
+    var manualInput   by remember { mutableStateOf("") }
 
     val showGoTop by remember {
         derivedStateOf {
@@ -108,8 +111,37 @@ fun ContinuousScannerScreen(
                     .fillMaxSize()
                     .padding(horizontal = 16.dp, vertical = 12.dp)
             ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    OutlinedTextField(
+                        value = manualInput,
+                        onValueChange = { manualInput = it },
+                        modifier = Modifier.weight(1f),
+                        placeholder = { Text("Enter Tote ID manually") },
+                        singleLine = true
+                    )
+                    Button(
+                        onClick = {
+                            val trimmed = manualInput.trim()
+                            if (trimmed.isNotEmpty()) {
+                                onManualToteId(trimmed)
+                                manualInput = ""
+                            }
+                        },
+                        colors = ButtonDefaults.buttonColors(containerColor = green),
+                        shape = RoundedCornerShape(8.dp)
+                    ) {
+                        Text("Add", color = MaterialTheme.colorScheme.onPrimary)
+                    }
+                }
+
+                Spacer(Modifier.height(10.dp))
+
                 Text(
-                    text = "Scanned Totes (${allTotes.size})",
+                    text = "Totes (${allTotes.size})",
                     fontWeight = FontWeight.Bold
                 )
                 Spacer(Modifier.height(6.dp))

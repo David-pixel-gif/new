@@ -68,6 +68,34 @@ class CheckoutViewModel : ViewModel() {
     fun setAssignedByToteId(map: Map<String, String>) { _assignedByToteId.value = map }
     fun setConfirmationId(id: String?)                { _confirmationId.value   = id }
 
+    fun addManualToteId(numericId: String) {
+        val trimmed = numericId.trim().removePrefix("#").trim()
+        val id = trimmed.toIntOrNull() ?: return
+        viewModelScope.launch {
+            if (toteIds.contains(trimmed)) return@launch
+            toteIds.add(trimmed)
+            val parameters = mapOf("include" to "ItemMovements(Warehouse,Organization)")
+            val response = api.getRecord(
+                TokenStore.bearerToken,
+                Container.Companion::class.java.name.split('.', '$')
+                    .takeWhile { it != "Companion" }.last(),
+                id,
+                parameters
+            )
+            if (response.isSuccessful) {
+                val container = json.decodeFromString<Container>(response.body() ?: "")
+                val itemMovement =
+                    container.ItemMovements?.firstOrNull { it.Warehouse?.WarehouseTypeId == 3 }
+                if (itemMovement != null) {
+                    val key = itemMovement.Organization?.Name?.uppercase() ?: "Unknown"
+                    val list = scannedByCompany.getOrPut(key) { mutableListOf() }
+                    val toteId = (container.ContainerId?.toInt() ?: 0).toString()
+                    if (!list.contains(toteId)) list.add(toteId)
+                }
+            }
+        }
+    }
+
     fun addScannedId(toteQRCode: String) {
         viewModelScope.launch {
             // Tote IDs on this system are numeric strings — convert for the API path.
