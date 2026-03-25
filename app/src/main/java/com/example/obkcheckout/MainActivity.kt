@@ -8,6 +8,8 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.core.content.ContextCompat
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -97,12 +99,12 @@ private fun OBKApp(vm: CheckoutViewModel = viewModel()) {
 
         composable("start") {
             ToteCheckoutStartScreen(
-                onScanClicked = { navController.navigate("scanner") },
-                onManualSubmit = { toteId ->
-                    vm.addManualToteId(toteId)
-                    navController.navigate("confirm")
-                },
-                onLogout = {
+                scannedByCompany = vm.scannedByCompany,
+                onScanClicked    = { navController.navigate("scanner") },
+                onManualAdd      = { toteId -> vm.addManualToteId(toteId) },
+                onRemove         = { company, id -> vm.removeScannedId(company, id) },
+                onProceed        = { navController.navigate("confirm") },
+                onLogout         = {
                     TokenStore.clear()
                     vm.reset()
                     navController.navigate("login") {
@@ -269,10 +271,14 @@ private fun OBKApp(vm: CheckoutViewModel = viewModel()) {
 // Screen composables that live in MainActivity
 // ---------------------------------------------------------------------------
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun ToteCheckoutStartScreen(
+    scannedByCompany: Map<String, List<String>>,
     onScanClicked: () -> Unit,
-    onManualSubmit: (String) -> Unit,
+    onManualAdd: (String) -> Unit,
+    onRemove: (company: String, toteId: String) -> Unit,
+    onProceed: () -> Unit,
     onLogout: () -> Unit
 ) {
     val context = androidx.compose.ui.platform.LocalContext.current
@@ -281,9 +287,7 @@ private fun ToteCheckoutStartScreen(
 
     val cameraPermissionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestPermission()
-    ) { granted ->
-        if (granted) onScanClicked()
-    }
+    ) { granted -> if (granted) onScanClicked() }
 
     fun launchScanner() {
         val granted = ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA) ==
@@ -292,15 +296,15 @@ private fun ToteCheckoutStartScreen(
         else cameraPermissionLauncher.launch(Manifest.permission.CAMERA)
     }
 
-    val green  = MaterialTheme.colorScheme.primary
+    val green   = MaterialTheme.colorScheme.primary
     val lightBg = MaterialTheme.colorScheme.primaryContainer
 
-    Box(modifier = Modifier.fillMaxSize().background(Color.White)) {
+    Column(modifier = Modifier.fillMaxSize().background(Color.White)) {
 
+        // Logo + title (fixed at top)
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .align(Alignment.TopCenter)
                 .padding(top = 56.dp, start = 24.dp, end = 24.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
@@ -309,9 +313,7 @@ private fun ToteCheckoutStartScreen(
                 contentDescription = "OBK Logo",
                 modifier = Modifier.size(190.dp)
             )
-
             Spacer(Modifier.height(10.dp))
-
             Text(
                 text = "Welcome to Tote Checkout!",
                 fontSize = fs(24),
@@ -321,127 +323,173 @@ private fun ToteCheckoutStartScreen(
             )
         }
 
-        Box(
+        // Scrollable card — form + live tote list
+        Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .align(Alignment.BottomCenter)
-                .height(520.dp)
+                .weight(1f)
                 .background(
                     color = lightBg,
                     shape = RoundedCornerShape(topStart = 32.dp, topEnd = 32.dp)
                 )
+                .verticalScroll(rememberScrollState())
+                .padding(horizontal = 26.dp, vertical = 26.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(horizontal = 26.dp, vertical = 26.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
+            Spacer(Modifier.height(10.dp))
+
+            Text(
+                text = "Enter Tote ID to checkout",
+                modifier = Modifier.fillMaxWidth(),
+                color = Color.Black,
+                fontSize = fs(13),
+                fontWeight = FontWeight.Medium
+            )
+
+            Spacer(Modifier.height(10.dp))
+
+            OutlinedTextField(
+                value = toteId,
+                onValueChange = {
+                    toteId = it
+                    if (!error.isNullOrEmpty()) error = null
+                },
+                modifier = Modifier.fillMaxWidth(),
+                placeholder = { Text("Enter Tote ID", fontSize = fs(13)) },
+                singleLine = true
+            )
+
+            if (!error.isNullOrEmpty()) {
+                Spacer(Modifier.height(8.dp))
+                Text(text = error!!, color = MaterialTheme.colorScheme.error, fontSize = fs(12))
+            }
+
+            Spacer(Modifier.height(18.dp))
+
+            Button(
+                onClick = {
+                    val trimmed = toteId.trim()
+                    if (trimmed.isEmpty()) {
+                        error = "Please enter a Tote ID."
+                    } else {
+                        onManualAdd(trimmed)
+                        toteId = ""
+                        error = null
+                    }
+                },
+                modifier = Modifier.fillMaxWidth().height(56.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = green),
+                shape = RoundedCornerShape(10.dp)
             ) {
-                Spacer(Modifier.height(10.dp))
-
                 Text(
-                    text = "Enter Tote ID to checkout",
-                    modifier = Modifier.fillMaxWidth(),
-                    color = Color.Black,
-                    fontSize = fs(13),
-                    fontWeight = FontWeight.Medium
+                    "Add",
+                    color = MaterialTheme.colorScheme.onPrimary,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = fs(15)
                 )
+            }
 
-                Spacer(Modifier.height(10.dp))
+            Spacer(Modifier.height(22.dp))
 
-                OutlinedTextField(
-                    value = toteId,
-                    onValueChange = {
-                        toteId = it
-                        if (!error.isNullOrEmpty()) error = null
-                    },
-                    modifier = Modifier.fillMaxWidth(),
-                    placeholder = { Text("Enter Tote ID", fontSize = fs(13)) },
-                    singleLine = true
-                )
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Divider(modifier = Modifier.weight(1f))
+                Text(text = "  or  ", color = Color.Gray, fontSize = fs(12))
+                Divider(modifier = Modifier.weight(1f))
+            }
 
-                if (!error.isNullOrEmpty()) {
-                    Spacer(Modifier.height(8.dp))
-                    Text(text = error!!, color = MaterialTheme.colorScheme.error, fontSize = fs(12))
+            Spacer(Modifier.height(22.dp))
+
+            OutlinedButton(
+                onClick = { launchScanner() },
+                modifier = Modifier.fillMaxWidth().height(56.dp),
+                border = BorderStroke(2.dp, green),
+                shape = RoundedCornerShape(10.dp),
+                colors = ButtonDefaults.outlinedButtonColors(containerColor = Color.White)
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        text = "Scan QR Code",
+                        color = green,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = fs(14)
+                    )
+                    Spacer(Modifier.size(10.dp))
+                    androidx.compose.material3.Icon(
+                        imageVector = Icons.Filled.QrCode2,
+                        contentDescription = "QR",
+                        tint = green,
+                        modifier = Modifier.size(22.dp)
+                    )
                 }
+            }
 
-                Spacer(Modifier.height(18.dp))
+            Spacer(Modifier.height(16.dp))
 
-                Button(
-                    onClick = {
-                        val trimmed = toteId.trim()
-                        if (trimmed.isEmpty()) {
-                            error = "Please enter a Tote ID."
-                        } else {
-                            onManualSubmit(trimmed)
-                            toteId = ""
+            OutlinedButton(
+                onClick = onLogout,
+                modifier = Modifier.fillMaxWidth().height(48.dp),
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.error),
+                shape = RoundedCornerShape(10.dp),
+                colors = ButtonDefaults.outlinedButtonColors(containerColor = Color.White)
+            ) {
+                Text(
+                    "Logout",
+                    color = MaterialTheme.colorScheme.error,
+                    fontWeight = FontWeight.Medium,
+                    fontSize = fs(14)
+                )
+            }
+
+            // Live tote list — appears as soon as totes are added
+            if (scannedByCompany.isNotEmpty()) {
+                Spacer(Modifier.height(24.dp))
+                Divider()
+                Spacer(Modifier.height(14.dp))
+                Text(
+                    text = "Totes added",
+                    fontSize = fs(14),
+                    fontWeight = FontWeight.Bold,
+                    color = Color.Black,
+                    modifier = Modifier.fillMaxWidth()
+                )
+                scannedByCompany.forEach { (company, ids) ->
+                    Text(
+                        text = company,
+                        fontSize = fs(14),
+                        fontWeight = FontWeight.Bold,
+                        color = Color.Black,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(top = 14.dp, bottom = 8.dp)
+                    )
+                    FlowRow(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(10.dp),
+                        verticalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        ids.forEach { id ->
+                            OBKIdChip(id = id, onRemove = { onRemove(company, id) })
                         }
-                    },
+                    }
+                }
+                Spacer(Modifier.height(20.dp))
+                Button(
+                    onClick = onProceed,
                     modifier = Modifier.fillMaxWidth().height(56.dp),
                     colors = ButtonDefaults.buttonColors(containerColor = green),
                     shape = RoundedCornerShape(10.dp)
                 ) {
                     Text(
-                        "Continue",
+                        "Proceed to Confirm",
                         color = MaterialTheme.colorScheme.onPrimary,
                         fontWeight = FontWeight.Bold,
-                        fontSize = fs(15)
-                    )
-                }
-
-                Spacer(Modifier.height(22.dp))
-
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Divider(modifier = Modifier.weight(1f))
-                    Text(text = "  or  ", color = Color.Gray, fontSize = fs(12))
-                    Divider(modifier = Modifier.weight(1f))
-                }
-
-                Spacer(Modifier.height(22.dp))
-
-                OutlinedButton(
-                    onClick = { launchScanner() },
-                    modifier = Modifier.fillMaxWidth().height(56.dp),
-                    border = BorderStroke(2.dp, green),
-                    shape = RoundedCornerShape(10.dp),
-                    colors = ButtonDefaults.outlinedButtonColors(containerColor = Color.White)
-                ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text(
-                            text = "Scan QR Code",
-                            color = green,
-                            fontWeight = FontWeight.Bold,
-                            fontSize = fs(14)
-                        )
-                        Spacer(Modifier.size(10.dp))
-                        androidx.compose.material3.Icon(
-                            imageVector = Icons.Filled.QrCode2,
-                            contentDescription = "QR",
-                            tint = green,
-                            modifier = Modifier.size(22.dp)
-                        )
-                    }
-                }
-
-                Spacer(Modifier.height(16.dp))
-
-                OutlinedButton(
-                    onClick = onLogout,
-                    modifier = Modifier.fillMaxWidth().height(48.dp),
-                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.error),
-                    shape = RoundedCornerShape(10.dp),
-                    colors = ButtonDefaults.outlinedButtonColors(containerColor = Color.White)
-                ) {
-                    Text(
-                        "Logout",
-                        color = MaterialTheme.colorScheme.error,
-                        fontWeight = FontWeight.Medium,
                         fontSize = fs(14)
                     )
                 }
+                Spacer(Modifier.height(10.dp))
             }
         }
     }

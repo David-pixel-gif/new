@@ -33,7 +33,7 @@ internal data class ParsedQrCode(
  */
 internal fun parseQrCode(raw: String): ParsedQrCode? {
     val trimmed = raw.trim()
-    for (delimiter in listOf(",", "|", ";", "\t")) {
+    for (delimiter in listOf("\r\n", "\n", ",", "|", ";", "\t")) {
         val parts = trimmed.split(delimiter)
         if (parts.size == 6) {
             val mealsInBatch = parts[2].trim().toIntOrNull() ?: continue
