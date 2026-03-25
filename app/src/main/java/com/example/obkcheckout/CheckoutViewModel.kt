@@ -113,48 +113,13 @@ class CheckoutViewModel : ViewModel() {
         val trimmed = numericId.trim().removePrefix("#").trim()
         val id = trimmed.toIntOrNull() ?: return
         val normalizedId = id.toString()
+        if (toteIds.contains(normalizedId)) return
+        toteIds.add(normalizedId)
+        // Show immediately so the tote is visible before the API responds
+        scannedByCompany.getOrPut("Unknown") { mutableListOf() }
+            .also { if (!it.contains(normalizedId)) it.add(normalizedId) }
         viewModelScope.launch {
-            if (toteIds.contains(normalizedId)) return@launch
-            toteIds.add(normalizedId)
-            val parameters = mapOf("include" to "ItemMovements(Warehouse,Organization)")
-            val response = api.getRecord(
-                TokenStore.bearerToken,
-                Container::class.simpleName ?: "Container",
-                id,
-                parameters
-            )
-            if (response.isSuccessful) {
-                val container = json.decodeFromString<Container>(response.body() ?: "")
-                val itemMovement =
-                    container.ItemMovements?.firstOrNull { it.Warehouse?.WarehouseTypeId == 3 }
-                if (itemMovement != null) {
-                    val key = itemMovement.Organization?.Name?.uppercase() ?: "Unknown"
-                    val list = scannedByCompany.getOrPut(key) { mutableListOf() }
-                    val toteId = (container.ContainerId?.toInt() ?: id).toString()
-                    if (!list.contains(toteId)) list.add(toteId)
-                }
-            }
-        }
-    }
-
-    fun addScannedId(rawQr: String) {
-        viewModelScope.launch {
-            val parsed = parseQrCode(rawQr)
-            if (parsed != null) {
-                // Full QR format — extract company and meals directly, no API call needed
-                val toteId = parsed.toteId
-                if (toteIds.contains(toteId)) return@launch
-                toteIds.add(toteId)
-                mealsByToteId[toteId] = parsed.mealsInTote
-                val company = parsed.companyName.uppercase()
-                val list = scannedByCompany.getOrPut(company) { mutableListOf() }
-                if (!list.contains(toteId)) list.add(toteId)
-            } else {
-                // Fall back: treat as plain numeric barcode and look up via API
-                val toteId = normalizeToToteId(rawQr)
-                if (toteId.isBlank() || toteIds.contains(toteId)) return@launch
-                toteIds.add(toteId)
-                val id = toteId.toIntOrNull() ?: return@launch
+            runCatching {
                 val parameters = mapOf("include" to "ItemMovements(Warehouse,Organization)")
                 val response = api.getRecord(
                     TokenStore.bearerToken,
@@ -166,11 +131,62 @@ class CheckoutViewModel : ViewModel() {
                     val container = json.decodeFromString<Container>(response.body() ?: "")
                     val itemMovement =
                         container.ItemMovements?.firstOrNull { it.Warehouse?.WarehouseTypeId == 3 }
-                    if (itemMovement != null) {
-                        val key = itemMovement.Organization?.Name?.uppercase() ?: "Unknown"
-                        val list = scannedByCompany.getOrPut(key) { mutableListOf() }
+                    val company = itemMovement?.Organization?.Name?.uppercase() ?: "Unknown"
+                    val toteId  = (container.ContainerId?.toInt() ?: id).toString()
+                    if (company != "Unknown") {
+                        scannedByCompany["Unknown"]?.remove(toteId)
+                        if (scannedByCompany["Unknown"]?.isEmpty() == true)
+                            scannedByCompany.remove("Unknown")
+                        val list = scannedByCompany.getOrPut(company) { mutableListOf() }
+                        if (!list.contains(toteId)) list.add(toteId)
+                    }
+                }
+            }
+        }
+    }
+
+    fun addScannedId(rawQr: String) {
+        val parsed = parseQrCode(rawQr)
+        if (parsed != null) {
+            // Full QR format — extract company and meals directly, no API call needed
+            val toteId = parsed.toteId
+            if (toteIds.contains(toteId)) return
+            toteIds.add(toteId)
+            mealsByToteId[toteId] = parsed.mealsInTote
+            val company = parsed.companyName.uppercase()
+            val list = scannedByCompany.getOrPut(company) { mutableListOf() }
+            if (!list.contains(toteId)) list.add(toteId)
+        } else {
+            // Fall back: treat as plain numeric barcode and look up via API
+            val toteId = normalizeToToteId(rawQr)
+            if (toteId.isBlank() || toteIds.contains(toteId)) return
+            toteIds.add(toteId)
+            // Show immediately so the tote is visible before the API responds
+            scannedByCompany.getOrPut("Unknown") { mutableListOf() }
+                .also { if (!it.contains(toteId)) it.add(toteId) }
+            val id = toteId.toIntOrNull() ?: return
+            viewModelScope.launch {
+                runCatching {
+                    val parameters = mapOf("include" to "ItemMovements(Warehouse,Organization)")
+                    val response = api.getRecord(
+                        TokenStore.bearerToken,
+                        Container::class.simpleName ?: "Container",
+                        id,
+                        parameters
+                    )
+                    if (response.isSuccessful) {
+                        val container = json.decodeFromString<Container>(response.body() ?: "")
+                        val itemMovement =
+                            container.ItemMovements?.firstOrNull { it.Warehouse?.WarehouseTypeId == 3 }
+                        val company      = itemMovement?.Organization?.Name?.uppercase() ?: "Unknown"
                         val actualToteId = (container.ContainerId?.toInt() ?: id).toString()
-                        if (!list.contains(actualToteId)) list.add(actualToteId)
+                        if (company != "Unknown") {
+                            scannedByCompany["Unknown"]?.remove(actualToteId)
+                            if (scannedByCompany["Unknown"]?.isEmpty() == true)
+                                scannedByCompany.remove("Unknown")
+                            val list = scannedByCompany.getOrPut(company) { mutableListOf() }
+                            if (!list.contains(actualToteId)) list.add(actualToteId)
+                        }
                     }
                 }
             }
