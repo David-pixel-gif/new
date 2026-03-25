@@ -1,5 +1,6 @@
 package com.example.obkcheckout
 
+import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.ViewModel
@@ -116,7 +117,7 @@ class CheckoutViewModel : ViewModel() {
         if (toteIds.contains(normalizedId)) return
         toteIds.add(normalizedId)
         // Show immediately so the tote is visible before the API responds
-        scannedByCompany.getOrPut("Unknown") { mutableListOf() }
+        scannedByCompany.getOrPut("Unknown") { mutableStateListOf() }
             .also { if (!it.contains(normalizedId)) it.add(normalizedId) }
         viewModelScope.launch {
             runCatching {
@@ -137,7 +138,7 @@ class CheckoutViewModel : ViewModel() {
                         scannedByCompany["Unknown"]?.remove(toteId)
                         if (scannedByCompany["Unknown"]?.isEmpty() == true)
                             scannedByCompany.remove("Unknown")
-                        val list = scannedByCompany.getOrPut(company) { mutableListOf() }
+                        val list = scannedByCompany.getOrPut(company) { mutableStateListOf() }
                         if (!list.contains(toteId)) list.add(toteId)
                     }
                 }
@@ -154,7 +155,7 @@ class CheckoutViewModel : ViewModel() {
             toteIds.add(toteId)
             mealsByToteId[toteId] = parsed.mealsInTote
             val company = parsed.companyName.uppercase()
-            val list = scannedByCompany.getOrPut(company) { mutableListOf() }
+            val list = scannedByCompany.getOrPut(company) { mutableStateListOf() }
             if (!list.contains(toteId)) list.add(toteId)
         } else {
             // Fall back: treat as plain numeric barcode and look up via API
@@ -162,7 +163,7 @@ class CheckoutViewModel : ViewModel() {
             if (toteId.isBlank() || toteIds.contains(toteId)) return
             toteIds.add(toteId)
             // Show immediately so the tote is visible before the API responds
-            scannedByCompany.getOrPut("Unknown") { mutableListOf() }
+            scannedByCompany.getOrPut("Unknown") { mutableStateListOf() }
                 .also { if (!it.contains(toteId)) it.add(toteId) }
             val id = toteId.toIntOrNull() ?: return
             viewModelScope.launch {
@@ -184,7 +185,7 @@ class CheckoutViewModel : ViewModel() {
                             scannedByCompany["Unknown"]?.remove(actualToteId)
                             if (scannedByCompany["Unknown"]?.isEmpty() == true)
                                 scannedByCompany.remove("Unknown")
-                            val list = scannedByCompany.getOrPut(company) { mutableListOf() }
+                            val list = scannedByCompany.getOrPut(company) { mutableStateListOf() }
                             if (!list.contains(actualToteId)) list.add(actualToteId)
                         }
                     }
