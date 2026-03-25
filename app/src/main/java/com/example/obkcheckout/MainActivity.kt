@@ -1,9 +1,14 @@
 package com.example.obkcheckout
 
+import android.Manifest
+import android.content.pm.PackageManager
 import android.os.Bundle
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.BorderStroke
+import androidx.core.content.ContextCompat
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -270,8 +275,22 @@ private fun ToteCheckoutStartScreen(
     onManualSubmit: (String) -> Unit,
     onLogout: () -> Unit
 ) {
+    val context = androidx.compose.ui.platform.LocalContext.current
     var toteId by remember { mutableStateOf("") }
     var error  by remember { mutableStateOf<String?>(null) }
+
+    val cameraPermissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission()
+    ) { granted ->
+        if (granted) onScanClicked()
+    }
+
+    fun launchScanner() {
+        val granted = ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA) ==
+                PackageManager.PERMISSION_GRANTED
+        if (granted) onScanClicked()
+        else cameraPermissionLauncher.launch(Manifest.permission.CAMERA)
+    }
 
     val green  = MaterialTheme.colorScheme.primary
     val lightBg = MaterialTheme.colorScheme.primaryContainer
@@ -384,7 +403,7 @@ private fun ToteCheckoutStartScreen(
                 Spacer(Modifier.height(22.dp))
 
                 OutlinedButton(
-                    onClick = onScanClicked,
+                    onClick = { launchScanner() },
                     modifier = Modifier.fillMaxWidth().height(56.dp),
                     border = BorderStroke(2.dp, green),
                     shape = RoundedCornerShape(10.dp),

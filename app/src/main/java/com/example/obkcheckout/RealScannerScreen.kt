@@ -65,12 +65,6 @@ fun RealScannerRoute(
         contract = ActivityResultContracts.RequestPermission()
     ) { granted -> hasCameraPermission = granted }
 
-    LaunchedEffect(Unit) {
-        if (!hasCameraPermission) {
-            permissionLauncher.launch(Manifest.permission.CAMERA)
-        }
-    }
-
     if (!hasCameraPermission) {
         Box(
             modifier = Modifier.fillMaxSize().background(Color.Black),
