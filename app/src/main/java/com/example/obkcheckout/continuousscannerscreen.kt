@@ -48,11 +48,14 @@ fun ContinuousScannerScreen(
     val scope     = rememberCoroutineScope()
     val green     = MaterialTheme.colorScheme.primary
 
-    val allTotes: List<Pair<String, String>> =
-        scannedByCompany.entries
-            .flatMap { entry -> entry.value.map { toteId -> entry.key to toteId } }
-            .distinctBy { it.second }
-            .sortedBy { it.second }
+    val allTotes by remember {
+        derivedStateOf {
+            scannedByCompany.entries
+                .flatMap { entry -> entry.value.map { toteId -> entry.key to toteId } }
+                .distinctBy { it.second }
+                .sortedBy { it.second }
+        }
+    }
 
     var pendingDelete by remember { mutableStateOf<Pair<String, String>?>(null) }
 

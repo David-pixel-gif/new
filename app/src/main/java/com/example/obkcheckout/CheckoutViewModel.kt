@@ -111,14 +111,16 @@ class CheckoutViewModel : ViewModel() {
     fun setConfirmationId(id: String?)                { _confirmationId.value   = id }
 
     fun addManualToteId(numericId: String) {
-        val trimmed = numericId.trim().removePrefix("#").trim()
-        val id = trimmed.toIntOrNull() ?: return
-        val normalizedId = id.toString()
+        // Normalise: strip whitespace and a leading '#'
+        val normalizedId = numericId.trim().removePrefix("#").trim()
+        if (normalizedId.isBlank()) return
         if (toteIds.contains(normalizedId)) return
         toteIds.add(normalizedId)
-        // Show immediately so the tote is visible before the API responds
+        // Add to state immediately — visible in the list before the API responds
         scannedByCompany.getOrPut("Unknown") { mutableStateListOf() }
             .also { if (!it.contains(normalizedId)) it.add(normalizedId) }
+        // API lookup is only possible when the ID is a valid Int; skip silently otherwise
+        val id = normalizedId.toIntOrNull() ?: return
         viewModelScope.launch {
             runCatching {
                 val parameters = mapOf("include" to "ItemMovements(Warehouse,Organization)")
