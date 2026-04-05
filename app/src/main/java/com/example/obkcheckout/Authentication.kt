@@ -53,6 +53,7 @@ class Authentication(private val api: ApiQairosService) {
                 else -> "Login failed (code ${responseToken.code()})"
             }
         } catch (e: Exception) {
+            if (e is kotlinx.coroutines.CancellationException) throw e
             "Network error: ${e.message}"
         }
     }

@@ -42,7 +42,6 @@ If roles should come from backend, replace ROLE_OPTIONS with a parameter:
 and pass them from MainActivity once backend wiring is ready.
 */
 private val ROLE_OPTIONS = listOf(
-    "Select role",
     "Driver",
     "Warehouse",
     "Volunteer",

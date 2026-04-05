@@ -51,7 +51,7 @@ import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.launch
 
-private fun normalizeEmail(raw: String): String = raw.trim()
+private fun normalizeEmail(raw: String): String = raw.trim().lowercase()
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
