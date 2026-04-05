@@ -351,9 +351,9 @@ private fun OBKSplashScreen() {
         )
         Spacer(Modifier.height(18.dp))
         Text(
-            text = "Preparing checkout...",
-            fontSize = 20.sp,
-            fontWeight = FontWeight.Bold,
+            text = "Welcome to Tote Checkout!",
+            fontSize = 22.sp,
+            fontWeight = FontWeight.ExtraBold,
             color = Color(0xFF172114)
         )
         Spacer(Modifier.height(20.dp))
@@ -451,14 +451,6 @@ private fun ToteCheckoutStartScreen(
                 painter = painterResource(id = R.drawable.obklogo2),
                 contentDescription = "OBK Logo",
                 modifier = Modifier.size(190.dp)
-            )
-            Spacer(Modifier.height(10.dp))
-            Text(
-                text = "Welcome to Tote Checkout!",
-                fontSize = fs(24),
-                fontWeight = FontWeight.ExtraBold,
-                color = Color.Black,
-                textAlign = TextAlign.Center
             )
         }
 
